@@ -1,0 +1,475 @@
+package editortrees;
+
+// A node in a height-balanced binary tree with rank.
+// Except for the NULL_NODE (if you choose to use one), one node cannot
+// belong to two different trees.
+
+public class Node {
+
+	enum Code {
+		SAME, LEFT, RIGHT;
+		// Used in the displayer and debug string
+		public String toString() {
+			switch (this) {
+			case LEFT:
+				return "/";
+			case SAME:
+				return "=";
+			case RIGHT:
+				return "\\";
+			default:
+				throw new IllegalStateException();
+			}
+		}
+	}
+
+	// The fields would normally be private, but for the purposes of this class,
+	// we want to be able to test the results of the algorithms in addition to
+	// the
+	// "publicly visible" effects
+
+	char element;
+	Node left, right, parent; // subtrees
+	int rank; // inorder position of this node within its own subtree.
+	Code balance;
+
+	// Node parent; // You may want this field.
+	// Feel free to add other fields that you find useful
+
+	// You will probably want to add several other methods
+
+	// For the following methods, you should fill in the details so that they
+	// work correctly
+
+	public Node(char element, Node parent) {
+		this.element = element;
+		this.left = EditTree.NULL_NODE;
+		this.right = EditTree.NULL_NODE;
+		this.parent = parent;
+		this.rank = 0;
+		this.balance = Code.SAME;
+	}
+	
+	/**
+	 * 
+	 * Creates a new Node that has all the parameters given, used specifically for copying a tree.
+	 *
+	 * @param element
+	 * 		element that the node is to be set to
+	 * @param parent
+	 * 		parent of the created node
+	 * @param rank
+	 * 		rank of the created node
+	 * @param balance
+	 * 		balance of the created node
+	 */
+
+	public Node(char element, Node parent, int rank, Code balance) {
+		this.element = element;
+		this.parent = parent;
+		this.rank = rank;
+		this.balance = balance;
+		this.left = EditTree.NULL_NODE;
+		this.right = EditTree.NULL_NODE;
+	}
+	
+//	public Code getBalanceSTree(int rightSide, int leftSide) {
+//		
+//		if(rightSide == leftSide) {
+//			return Code.SAME;
+//		}
+//		if(rightSide > leftSide)
+//		
+//		return Code.SAME;
+//	}
+
+	/**
+	 * 
+	 * Calculates the height of the Tree.
+	 * 
+	 * @return an integer representation of the trees height.
+	 */
+	public int height() {
+		if (this == EditTree.NULL_NODE)
+			return -1;
+		Node current = this;
+		if (current.balance == Code.LEFT)
+			return 1 + current.left.height();
+		return 1 + current.right.height();
+	}
+
+	public Node() {
+		parent = EditTree.NULL_NODE;
+		left = null;
+		right = null;
+		element = '\n';
+	}
+
+	/**
+	 * 
+	 * Calculates the size of the Tree (number of nodes).
+	 *
+	 * @return an integer signifying the trees size.
+	 */
+	public int size() {
+		if (this == EditTree.NULL_NODE) {
+			return 0;
+		}
+		return this.rank + 1 + this.right.size();
+	}
+
+	/**
+	 * 
+	 * Creates a new Node with the given element, c and appends it to the
+	 * rightmost position on the tree.
+	 *
+	 * @param c
+	 *            the given element
+	 * @return the Node with element c
+	 */
+	public Node add(char c) {
+
+		if (this.right == EditTree.NULL_NODE) {
+			Node temp = new Node(c, this);
+			this.right = temp;
+			return this.right;
+		}
+		Node temp = this.right.add(c);
+		return temp;
+
+	}
+
+	/**
+	 * 
+	 * Does a single left rotation at the parent Node to keep the AVL Tree
+	 * height balanced.
+	 *
+	 * @param parent
+	 *            The node at which the method rotates
+	 * @param child
+	 *            The parent's child that becomes the new parent
+	 * @return The new 'parent' node
+	 */
+	public Node singleLeftRotation(Node parent, Node child) {
+		// update rank
+		child.rank = parent.rank + 1 + child.rank;
+
+		// update parent of child's left subtree
+		if (child.left != EditTree.NULL_NODE) {
+			child.left.parent = parent;
+		}
+		// perform the rotation
+		parent.right = child.left;
+		child.left = parent;
+		// update balance codes
+		parent.balance = Code.SAME;
+		child.balance = Code.SAME;
+		// update the rest of the parents
+		child.parent = parent.parent;
+		if (parent.parent != EditTree.NULL_NODE) {
+			if (parent.parent.left.equals(parent))
+				child.parent.left = child;
+			else
+				child.parent.right = child;
+		}
+		parent.parent = child;
+		return child;
+	}
+
+	/**
+	 * 
+	 * Does a single right rotation at the parent Node to keep the AVL Tree
+	 * height balanced.
+	 *
+	 * @param parent
+	 *            The node at which the method rotates
+	 * @param child
+	 *            The parent's child that becomes the new parent
+	 * @return The new 'parent' node
+	 */
+	public Node singleRightRotation(Node parent, Node child) {
+		// update rank
+		parent.rank = parent.rank - (child.rank + 1);
+		// update parent of child's right subtree
+		if (child.right != EditTree.NULL_NODE) {
+			child.right.parent = parent;
+		}
+		// perform the rotation
+		parent.left = child.right;
+		child.right = parent;
+		// update balance codes
+		parent.balance = Code.SAME;
+		child.balance = Code.SAME;
+		// update remaining parents
+		child.parent = parent.parent;
+		if (parent.parent != EditTree.NULL_NODE) {
+			if (parent.parent.left.equals(parent))
+				child.parent.left = child;
+			else
+				child.parent.right = child;
+		}
+		parent.parent = child;
+		return child;
+	}
+
+	/**
+	 * 
+	 * Performs a double left rotation in the AVL Tree.
+	 *
+	 * @param parent
+	 *            Node at which we perform the rotation
+	 * @param child
+	 *            Child Node of the parent
+	 * @param grandChild
+	 *            Child Node of the child
+	 * @return Rearranged subtree with grandChild as the new root
+	 */
+	public Node doubleLeftRotation(Node parent, Node child, Node grandChild) {
+		// update ranks
+		child.rank = child.rank - (grandChild.rank + 1);
+		grandChild.rank = grandChild.rank + parent.rank + 1;
+
+		// update potential parents
+		if (grandChild.left != EditTree.NULL_NODE) {
+			grandChild.left.parent = parent;
+		}
+		if (grandChild.right != EditTree.NULL_NODE) {
+			grandChild.right.parent = child;
+		}
+
+		// update balance codes
+		if (grandChild.balance == Code.RIGHT) {
+			// change left's node to left balance
+			parent.balance = Code.LEFT;
+			child.balance = Code.SAME;
+			grandChild.balance = Code.SAME;
+
+		} else if (grandChild.balance == Code.LEFT) {
+			// change right's node to right balance
+			child.balance = Code.RIGHT;
+			parent.balance = Code.SAME;
+			grandChild.balance = Code.SAME;
+		} else if (grandChild.balance == Code.SAME) {
+			child.balance = Code.SAME;
+			parent.balance = Code.SAME;
+		}
+		// perform the double rotation
+		child.left = grandChild.right;
+		parent.right = grandChild.left;
+		grandChild.left = parent;
+		grandChild.right = child;
+		// update parents
+		grandChild.parent = parent.parent;
+
+		if (parent.parent != EditTree.NULL_NODE) {
+			if (parent.parent.left.equals(parent))
+				grandChild.parent.left = grandChild;
+			else
+				grandChild.parent.right = grandChild;
+		}
+
+		parent.parent = grandChild;
+		child.parent = grandChild;
+
+		return grandChild;
+	}
+
+	/**
+	 * 
+	 * Performs a double right rotation in the AVL Tree.
+	 *
+	 * @param parent
+	 *            Node at which we perform the rotation
+	 * @param child
+	 *            Child Node of the parent
+	 * @param grandChild
+	 *            Child Node of the child
+	 * @return Rearranged subtree with grandChild as the new root
+	 */
+	public Node doubleRightRotation(Node parent, Node child, Node grandChild) {
+		// update rank
+		parent.rank = parent.rank - child.rank - 1 - grandChild.rank - 1;
+		grandChild.rank = grandChild.rank + child.rank + 1;
+
+		// update potential parents
+		if (grandChild.left != EditTree.NULL_NODE) {
+			grandChild.left.parent = child;
+		}
+		if (grandChild.right != EditTree.NULL_NODE) {
+			grandChild.right.parent = parent;
+		}
+
+		// update balance codes
+		if (grandChild.balance == Code.RIGHT) {
+			// change left's node to left balance
+			if (parent.right != EditTree.NULL_NODE)
+				parent.balance = Code.SAME;
+			else
+				parent.balance = Code.LEFT;
+			child.balance = Code.LEFT;
+			grandChild.balance = Code.SAME;
+
+		} else if (grandChild.balance == Code.LEFT) {
+			// change right's node to right balance
+			if (child.left != EditTree.NULL_NODE)
+				child.balance = Code.SAME;
+			else
+				child.balance = Code.RIGHT;
+			if (parent.right != EditTree.NULL_NODE)
+				parent.balance = Code.RIGHT;
+			grandChild.balance = Code.SAME;
+		} else if (grandChild.balance == Code.SAME) {
+			parent.balance = Code.SAME;
+			child.balance = Code.SAME;
+		}
+		// perform the double rotation
+		child.right = grandChild.left;
+		parent.left = grandChild.right;
+		grandChild.left = child;
+		grandChild.right = parent;
+
+		// update parents
+		grandChild.parent = parent.parent;
+		if (parent.parent != EditTree.NULL_NODE) {
+			if (parent.parent.left.equals(parent))
+				grandChild.parent.left = grandChild;
+			else
+				grandChild.parent.right = grandChild;
+		}
+
+		parent.parent = grandChild;
+		child.parent = grandChild;
+
+		return grandChild;
+	}
+
+	/**
+	 * 
+	 * Constructs a new Node that has element c in position pos on the AVL Tree.
+	 *
+	 * @param c
+	 * @param pos
+	 * @return Newly constructed Node
+	 */
+	public Node add(char c, int pos) {
+		// left case
+		if (pos <= this.rank) {
+			if (this.left == EditTree.NULL_NODE) {
+				this.rank++;
+				this.left = new Node(c, this);
+				return this.left;
+			}
+			this.rank++;
+			return this.left.add(c, pos);
+		} else if (pos > this.rank) {// right case
+			if (this.right == EditTree.NULL_NODE) {
+				this.right = new Node(c, this);
+				return this.right;
+			}
+			return this.right.add(c, pos - (this.rank + 1));
+		}
+		return this;
+
+	}
+
+	/**
+	 * Returns an in-order string representation of the Tree.
+	 */
+	public String toString() {
+		if (this == EditTree.NULL_NODE) {
+			return "";
+		}
+		return this.left.toString() + this.element + this.right.toString();
+	}
+
+	/**
+	 * 
+	 * Returns a pre-order traversal of the Tree as a string with balance code,
+	 * rank, and character.
+	 *
+	 * @return The described debug string.
+	 */
+	public String toDebugString() {
+		if (this == EditTree.NULL_NODE) {
+			return "";
+		}
+		return "" + this.element + this.rank + this.balance + ", "
+				+ this.left.toDebugString() + this.right.toDebugString();
+	}
+
+	/**
+	 * 
+	 * Finds and returns the element of the Node at the given position.
+	 *
+	 * @param pos
+	 * @return a character element
+	 */
+	public char get(int pos) {
+		if (pos == this.rank)
+			return this.element;
+		if (pos < this.rank)
+			return this.left.get(pos);
+		return this.right.get(pos - (this.rank + 1));
+	}
+	
+	/**
+	 * 
+	 * Finds and returns the element of the Node starting at the given position and going until the given end.
+	 *
+	 * @param start
+	 * 		starting position
+	 * @param end
+	 * 		ending position to find
+	 * @return
+	 * 		returns the string that was created during recursion
+	 */
+	
+	public String get(int start, int end) {
+		if(this == EditTree.NULL_NODE) {
+			return "";
+		}
+		if(start <= this.rank && end >= this.rank) {
+			return this.left.get(start, end) + this.element + this.right.get(start - this.rank, end - this.rank);
+		}
+		if(this.rank > end || this.rank < start) {
+			return "";
+		}
+		if(start > this.rank) {
+			return this.right.get(start - this.rank, end - this.rank);
+		}
+		if(end < this.rank) {
+			return this.left.get(start, end);
+		}
+		return"";
+	}
+	
+	/**
+	 * 
+	 * Creates a new tree using recursion (for use with createTree(EditTree e)
+	 * that is an exact copy of the tree given.
+	 *
+	 * @param oldRootOfSubTree
+	 * 		the root of the subTree that the method is currently on
+	 * @return
+	 * 		returns the new node to be set as either the left, right, or root of the node above it
+	 */
+
+	public Node createTree(Node oldRootOfSubTree) {
+		
+		//checks if the left is a NULL_NODE if so it doesn't need to edit the left of the current Node.
+		if (oldRootOfSubTree.left != EditTree.NULL_NODE) {
+			this.left = new Node(oldRootOfSubTree.left.element, this,
+					oldRootOfSubTree.left.rank, oldRootOfSubTree.left.balance);
+			//sets the left as the node created in the recursion
+			this.left = this.left.createTree(oldRootOfSubTree.left);
+		}
+		//checks if the right is a NULL_NODE if so it doesn't need to edit the right of the currentNode.
+		if (oldRootOfSubTree.right != EditTree.NULL_NODE) {
+			this.right = new Node(oldRootOfSubTree.right.element, this,
+					oldRootOfSubTree.right.rank, oldRootOfSubTree.right.balance);
+			//sets the right as the node created in the recursion
+			this.right = this.right.createTree(oldRootOfSubTree.right);
+		}
+		return this;
+	}
+}
